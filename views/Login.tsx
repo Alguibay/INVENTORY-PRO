@@ -1,34 +1,83 @@
-
-import React from 'react';
-import { UserRole } from '../types';
-import { BriefcaseIcon, UserIcon, BuildingStorefrontIcon } from '../components/icons/Icons';
+import React, { useState } from 'react';
 
 interface LoginProps {
-    onLogin: (role: UserRole) => void;
+    onLogin: (credentials: { rut: string; password: string }) => Promise<void>;
 }
 
-const RoleButton: React.FC<{ role: UserRole; label: string; icon: React.ReactNode; onClick: (role: UserRole) => void; }> = ({ role, label, icon, onClick }) => (
-    <button
-        onClick={() => onClick(role)}
-        className="flex flex-col items-center justify-center w-full p-6 space-y-3 bg-white rounded-lg shadow-lg hover:shadow-xl hover:bg-blue-50 transition-all duration-300 transform hover:-translate-y-1"
-    >
-        {icon}
-        <span className="text-lg font-semibold text-gray-700">{label}</span>
-    </button>
-);
-
-
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
+    const [rut, setRut] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+        try {
+            await onLogin({ rut, password });
+        } catch (err: any) {
+            setError(err.message || 'Ocurrió un error inesperado.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
-            <div className="w-full max-w-4xl p-8 mx-4 space-y-8 bg-white rounded-2xl shadow-2xl text-center">
-                <h1 className="text-4xl font-bold text-gray-800">Bienvenido a Gestor de Bodega Pro</h1>
-                <p className="text-xl text-gray-500">Por favor, seleccione su rol para continuar</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-6">
-                    <RoleButton role={UserRole.Technician} label="Técnico" icon={<UserIcon className="w-16 h-16 text-primary"/>} onClick={onLogin} />
-                    <RoleButton role={UserRole.Warehouse} label="Bodeguero" icon={<BuildingStorefrontIcon className="w-16 h-16 text-primary"/>} onClick={onLogin} />
-                    <RoleButton role={UserRole.Admin} label="Administrador" icon={<BriefcaseIcon className="w-16 h-16 text-primary"/>} onClick={onLogin} />
+            <div className="w-full max-w-sm p-8 space-y-6 bg-white rounded-2xl shadow-2xl">
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold text-gray-800">Iniciar Sesión</h1>
+                    <p className="mt-2 text-gray-500">Gestor de Bodega Pro</p>
                 </div>
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                    <div>
+                        <label htmlFor="rut" className="block text-sm font-medium text-gray-700">
+                            Usuario / RUT
+                        </label>
+                        <input
+                            id="rut"
+                            name="rut"
+                            type="text"
+                            required
+                            value={rut}
+                            onChange={(e) => setRut(e.target.value)}
+                            placeholder="Ej: 1"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                            Contraseña
+                        </label>
+                        <input
+                            id="password"
+                            name="password"
+                            type="password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="••••••"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                        />
+                    </div>
+
+                    {error && (
+                        <div className="p-3 text-sm text-red-700 bg-red-100 rounded-md">
+                            {error}
+                        </div>
+                    )}
+
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                            {loading ? 'Ingresando...' : 'Ingresar'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );

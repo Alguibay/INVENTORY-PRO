@@ -1,3 +1,9 @@
+// Declaración global para la librería XLSX cargada desde el CDN
+// Fix: Correctly declare XLSX as a global type. Since this file is a module (due to exports),
+// `declare var` is locally scoped. `declare global` makes it available project-wide.
+declare global {
+    var XLSX: any;
+}
 
 export enum UserRole {
     Technician = 'Técnico',
@@ -34,6 +40,7 @@ export interface User {
     region: string;
     pais: string;
     rut: string;
+    password?: string;
 }
 
 export interface Product {

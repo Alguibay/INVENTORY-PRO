@@ -2,8 +2,8 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Order, OrderStatus } from '../../types';
 import { supabase, mockProducts } from '../../services/supabase';
 import { UserContext } from '../../App';
-// Fix: Import missing ClipboardDocumentListIcon component.
 import { UserIcon, ClipboardDocumentListIcon } from '../../components/icons/Icons';
+import Modal from '../../components/Modal';
 
 const getStatusStyles = (status: OrderStatus) => {
     switch (status) {
@@ -20,7 +20,7 @@ const RequestCard: React.FC<{ order: Order, onSelect: (order: Order) => void }> 
     const { bg, text, border } = getStatusStyles(order.estado);
     
     return (
-        <div className={`bg-white rounded-lg shadow-md mb-4 border-l-4 ${border}`} onClick={() => onSelect(order)}>
+        <div className={`bg-white rounded-lg shadow-md mb-4 border-l-4 ${border} cursor-pointer hover:shadow-lg transition-shadow`} onClick={() => onSelect(order)}>
             <div className="p-4">
                 <div className="flex justify-between items-start">
                     <div>
@@ -43,8 +43,59 @@ const RequestCard: React.FC<{ order: Order, onSelect: (order: Order) => void }> 
     );
 };
 
+const DispatchForm: React.FC<{ onSubmit: (details: {numeroGuia: string, odt: string, fechaRetiro: string}) => void; onCancel: () => void; }> = ({ onSubmit, onCancel }) => {
+    const [details, setDetails] = useState({ numeroGuia: '', odt: '', fechaRetiro: new Date().toISOString().split('T')[0] });
+    
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDetails({ ...details, [e.target.name]: e.target.value });
+    }
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        onSubmit(details);
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <label htmlFor="numeroGuia" className="block text-sm font-medium text-gray-700">Número de Guía</label>
+                <input type="text" name="numeroGuia" id="numeroGuia" value={details.numeroGuia} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+            </div>
+            <div>
+                <label htmlFor="odt" className="block text-sm font-medium text-gray-700">ODT (Orden de Trabajo)</label>
+                <input type="text" name="odt" id="odt" value={details.odt} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+            </div>
+            <div>
+                <label htmlFor="fechaRetiro" className="block text-sm font-medium text-gray-700">Fecha Disponible para Retiro</label>
+                <input type="date" name="fechaRetiro" id="fechaRetiro" value={details.fechaRetiro} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" required/>
+            </div>
+            <div className="flex justify-end space-x-3 pt-2">
+                <button type="button" onClick={onCancel} className="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">Cancelar</button>
+                <button type="submit" className="bg-success text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600">Confirmar Despacho</button>
+            </div>
+        </form>
+    )
+}
+
 const PackingView: React.FC<{ order: Order, onBack: () => void }> = ({ order, onBack }) => {
     const getProductDetails = (sku: string) => mockProducts.find(p => p.sku === sku);
+    const [isDispatchModalOpen, setDispatchModalOpen] = useState(false);
+
+    const handleDispatch = async (details: {numeroGuia: string, odt: string, fechaRetiro: string}) => {
+        const { error } = await supabase.from('pedidos').update(order.id, {
+            ...details,
+            estado: OrderStatus.ReadyForPickup,
+        });
+
+        if (error) {
+            alert('Error al despachar el pedido.');
+            console.error(error);
+        } else {
+            alert('Pedido despachado con éxito.');
+            setDispatchModalOpen(false);
+            onBack(); // Go back to the list to see the update
+        }
+    };
 
     return (
         <div className="p-4">
@@ -73,10 +124,13 @@ const PackingView: React.FC<{ order: Order, onBack: () => void }> = ({ order, on
                 <button className="w-full bg-error text-white font-bold py-3 px-4 rounded-lg">
                     Rechazar Pedido
                 </button>
-                <button className="w-full bg-success text-white font-bold py-3 px-4 rounded-lg">
+                <button onClick={() => setDispatchModalOpen(true)} className="w-full bg-success text-white font-bold py-3 px-4 rounded-lg">
                     Marcar como Listo y Despachar
                 </button>
              </div>
+             <Modal isOpen={isDispatchModalOpen} onClose={() => setDispatchModalOpen(false)} title="Información de Despacho">
+                <DispatchForm onSubmit={handleDispatch} onCancel={() => setDispatchModalOpen(false)} />
+             </Modal>
         </div>
     );
 }
@@ -86,6 +140,7 @@ const RequestQueue: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [version, setVersion] = useState(0); // Used to force re-render
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -103,12 +158,17 @@ const RequestQueue: React.FC = () => {
         };
 
         fetchOrders();
-    }, [user]);
+    }, [user, version]);
+
+    const handleBack = () => {
+        setSelectedOrder(null);
+        setVersion(v => v + 1); // Increment version to trigger a re-fetch
+    }
 
     if (loading) return <div className="text-center p-4">Cargando pedidos...</div>;
     
     if (selectedOrder) {
-        return <PackingView order={selectedOrder} onBack={() => setSelectedOrder(null)} />;
+        return <PackingView order={selectedOrder} onBack={handleBack} />;
     }
 
     if (orders.length === 0) return (

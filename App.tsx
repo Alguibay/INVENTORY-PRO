@@ -5,16 +5,23 @@ import TechnicianView from './views/technician/TechnicianView';
 import WarehouseView from './views/warehouse/WarehouseView';
 import Login from './views/Login';
 import { User, UserRole } from './types';
-import { mockUsers } from './services/supabase';
+import { supabase } from './services/supabase';
 
 export const UserContext = React.createContext<{ user: User | null; setUser: React.Dispatch<React.SetStateAction<User | null>> }>({ user: null, setUser: () => {} });
 
 const App: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
 
-    const handleLogin = (role: UserRole) => {
-        const foundUser = mockUsers.find(u => u.tipo === role);
-        setUser(foundUser || null);
+    const handleLogin = async (credentials: { rut: string, password: string }) => {
+        const { data, error } = await supabase.auth.signInWithPassword(credentials);
+
+        if (data.user) {
+            setUser(data.user);
+        } else if (error) {
+            throw new Error(error.message);
+        } else {
+            throw new Error("Un error inesperado ocurrió durante el inicio de sesión.");
+        }
     };
 
     const handleLogout = () => {
@@ -36,6 +43,7 @@ const App: React.FC = () => {
             case UserRole.Warehouse:
                 return <WarehouseView onLogout={handleLogout} />;
             default:
+                // This case should ideally not be reached if login is successful
                 return <Login onLogin={handleLogin} />;
         }
     };

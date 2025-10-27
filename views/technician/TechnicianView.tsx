@@ -1,7 +1,7 @@
-
 import React, { useState, useContext } from 'react';
 import { UserContext } from '../../App';
 import RequestList from './RequestList';
+import NewRequestForm from './NewRequestForm';
 import { ClipboardDocumentListIcon, PlusCircleIcon, ChatBubbleLeftRightIcon, UserIcon } from '../../components/icons/Icons';
 
 interface TechnicianViewProps {
@@ -15,7 +15,7 @@ const TechnicianView: React.FC<TechnicianViewProps> = ({ onLogout }) => {
     const renderContent = () => {
         switch (activeView) {
             case 'new':
-                return <div className="p-4"><h2 className="text-xl font-bold">Nueva Solicitud</h2><p>Formulario para crear pedido...</p></div>;
+                return <NewRequestForm onOrderPlaced={() => setActiveView('requests')} />;
             case 'chat':
                 return <div className="p-4"><h2 className="text-xl font-bold">Chat con Bodega</h2><p>Interfaz de comunicación...</p></div>;
             case 'profile':
