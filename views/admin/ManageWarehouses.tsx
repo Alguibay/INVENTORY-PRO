@@ -50,8 +50,8 @@ const ManageWarehouses: React.FC = () => {
     const handleEditWarehouse = (wh: Warehouse) => { setIsAdding(false); setSelectedWarehouse(wh); setWarehouseModalOpen(true); };
     const submitWarehouseForm = async (data: Warehouse | Omit<Warehouse, 'id'>) => {
         const promise = 'id' in data 
-            ? supabase.from('bodegas').update(data.id, data)
-            : supabase.from('bodegas').insert(data);
+            ? supabase.from('bodegas').update({ nombre: data.nombre, direccion: data.direccion }).eq('id', data.id)
+            : supabase.from('bodegas').insert([data]);
         const { error } = await promise;
         if (error) alert(`Error: ${error.message}`);
         else { setWarehouseModalOpen(false); setVersion(v => v + 1); }
@@ -62,8 +62,8 @@ const ManageWarehouses: React.FC = () => {
     const handleEditLocation = (loc: WarehouseLocation) => { setIsAdding(false); setSelectedLocation(loc); setLocationModalOpen(true); };
     const submitLocationForm = async (data: WarehouseLocation | Omit<WarehouseLocation, 'id'>) => {
         const promise = 'id' in data
-            ? supabase.from('mapping_bodega').update(data.id, data)
-            : supabase.from('mapping_bodega').insert(data);
+            ? supabase.from('mapping_bodega').update({ idUbicacion: data.idUbicacion, numeroOrden: data.numeroOrden, estado: data.estado }).eq('id', data.id)
+            : supabase.from('mapping_bodega').insert([data]);
         const { error } = await promise;
         if (error) alert(`Error: ${error.message}`);
         else { setLocationModalOpen(false); setVersion(v => v + 1); }
@@ -71,7 +71,7 @@ const ManageWarehouses: React.FC = () => {
 
     const handleUploadWarehouses = async (data: Partial<Warehouse>[]) => {
         const itemsToInsert = data.map(i => ({...i} as Omit<Warehouse, 'id'>));
-        const { error } = await supabase.from('bodegas').insertBulk(itemsToInsert);
+        const { error } = await supabase.from('bodegas').insert(itemsToInsert);
         if (error) {
              alert(`Error al cargar bodegas: ${error.message}`);
         } else {
@@ -83,7 +83,7 @@ const ManageWarehouses: React.FC = () => {
 
     const handleUploadLocations = async (data: Partial<WarehouseLocation>[]) => {
         const itemsToInsert = data.map(i => ({...i, estado: i.estado ?? true} as Omit<WarehouseLocation, 'id'>));
-        const { error } = await supabase.from('mapping_bodega').insertBulk(itemsToInsert);
+        const { error } = await supabase.from('mapping_bodega').insert(itemsToInsert);
         if (error) {
              alert(`Error al cargar ubicaciones: ${error.message}`);
         } else {

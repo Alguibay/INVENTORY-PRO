@@ -1,5 +1,5 @@
 {
-  "name": "Gestor de Bodega Pro",
+  "name": "Gestor de Bodega Pro S/BD",
   "description": "Una aplicación completa para que los técnicos de campo soliciten materiales a los almacenes, con vistas dedicadas para técnicos, personal de almacén y administradores para gestionar todo el flujo de trabajo, desde la solicitud hasta la recepción.",
   "requestFramePermissions": []
 }

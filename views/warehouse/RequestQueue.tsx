@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Order, OrderStatus } from '../../types';
-import { supabase, mockProducts } from '../../services/supabase';
+import { OrderWithItems, OrderStatus, Product, OrderItem } from '../../types';
+import { supabase } from '../../services/supabase';
 import { UserContext } from '../../App';
 import { UserIcon, ClipboardDocumentListIcon } from '../../components/icons/Icons';
 import Modal from '../../components/Modal';
@@ -16,7 +16,7 @@ const getStatusStyles = (status: OrderStatus) => {
     }
 };
 
-const RequestCard: React.FC<{ order: Order, onSelect: (order: Order) => void }> = ({ order, onSelect }) => {
+const RequestCard: React.FC<{ order: OrderWithItems, onSelect: (order: OrderWithItems) => void }> = ({ order, onSelect }) => {
     const { bg, text, border } = getStatusStyles(order.estado);
     
     return (
@@ -77,19 +77,19 @@ const DispatchForm: React.FC<{ onSubmit: (details: {numeroGuia: string, odt: str
     )
 }
 
-const PackingView: React.FC<{ order: Order, onBack: () => void }> = ({ order, onBack }) => {
-    const getProductDetails = (sku: string) => mockProducts.find(p => p.sku === sku);
+const PackingView: React.FC<{ order: OrderWithItems, onBack: () => void, products: Product[] }> = ({ order, onBack, products }) => {
+    const getProductDetails = (sku: string) => products.find(p => p.sku === sku);
     const [isDispatchModalOpen, setDispatchModalOpen] = useState(false);
 
     const handleDispatch = async (details: {numeroGuia: string, odt: string, fechaRetiro: string}) => {
-        const { error } = await supabase.from('pedidos').update(order.id, {
+        const { error } = await supabase.from('pedidos').update({
             ...details,
             estado: OrderStatus.ReadyForPickup,
-        });
+        }).eq('id', order.id);
 
         if (error) {
             alert('Error al despachar el pedido.');
-            console.error(error);
+            console.error(error.message, error);
         } else {
             alert('Pedido despachado con éxito.');
             setDispatchModalOpen(false);
@@ -105,7 +105,7 @@ const PackingView: React.FC<{ order: Order, onBack: () => void }> = ({ order, on
              
              <div className="bg-white rounded-lg shadow p-4 space-y-4">
                 <h3 className="font-semibold">Items a preparar:</h3>
-                {order.items.map(item => {
+                {order.items.map((item: OrderItem) => {
                     const product = getProductDetails(item.sku);
                     return (
                         <div key={item.id} className="flex items-center justify-between p-2 rounded-md bg-gray-50">
@@ -137,27 +137,61 @@ const PackingView: React.FC<{ order: Order, onBack: () => void }> = ({ order, on
 
 const RequestQueue: React.FC = () => {
     const { user } = useContext(UserContext);
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [orders, setOrders] = useState<OrderWithItems[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
     const [version, setVersion] = useState(0); // Used to force re-render
 
     useEffect(() => {
-        const fetchOrders = async () => {
+        const fetchData = async () => {
             if (!user) return;
             setLoading(true);
-            const { data, error } = await supabase.from('pedidos').select(o => 
-                o.idBodega === user.idBodega && (o.estado === OrderStatus.Requested || o.estado === OrderStatus.Preparing)
-            );
-            if (error) {
-                console.error('Error fetching orders:', error);
+
+            const { data: ordersData, error: ordersError } = await supabase
+                .from('pedidos')
+                .select('*')
+                .eq('idBodega', user.id_bodega)
+                .in('estado', [OrderStatus.Requested, OrderStatus.Preparing]);
+            
+            const { data: productsData, error: productsError } = await supabase.from('productos').select('*');
+
+            if (ordersError) {
+                console.error('Error fetching orders:', ordersError.message, ordersError);
+            } else if (ordersData) {
+                 const orderIds = ordersData.map(o => o.id);
+                 if (orderIds.length > 0) {
+                    const { data: itemsData, error: itemsError } = await supabase
+                        .from('pedido_items')
+                        .select('*')
+                        .in('idPedido', orderIds);
+
+                    if (itemsError) {
+                        console.error('Error fetching order items:', itemsError.message, itemsError);
+                    } else {
+                        const ordersWithItems: OrderWithItems[] = ordersData.map(order => ({
+                            ...order,
+                            items: itemsData?.filter(item => item.idPedido === order.id) || []
+                        }));
+                        setOrders(ordersWithItems.sort((a,b) => a.id - b.id));
+                    }
+                 } else {
+                     setOrders([]);
+                 }
             } else {
-                setOrders(data.sort((a,b) => a.id - b.id) || []);
+                setOrders([]);
             }
+
+            if (productsError) {
+                console.error('Error fetching products', productsError.message, productsError);
+            } else {
+                setProducts(productsData || []);
+            }
+            
             setLoading(false);
         };
 
-        fetchOrders();
+        fetchData();
     }, [user, version]);
 
     const handleBack = () => {
@@ -168,7 +202,7 @@ const RequestQueue: React.FC = () => {
     if (loading) return <div className="text-center p-4">Cargando pedidos...</div>;
     
     if (selectedOrder) {
-        return <PackingView order={selectedOrder} onBack={handleBack} />;
+        return <PackingView order={selectedOrder} onBack={handleBack} products={products} />;
     }
 
     if (orders.length === 0) return (

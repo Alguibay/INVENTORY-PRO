@@ -17,7 +17,11 @@ const NewRequestForm: React.FC<NewRequestFormProps> = ({ onOrderPlaced }) => {
 
     useEffect(() => {
         const fetchProducts = async () => {
-            const { data } = await supabase.from('productos').select(p => p.estado === true);
+            // ACTUALIZADO: Sintaxis de Supabase para 'select' con filtro 'eq'
+            const { data } = await supabase
+                .from('productos')
+                .select('*')
+                .eq('estado', true); 
             setProducts(data || []);
         };
         fetchProducts();
@@ -28,6 +32,7 @@ const NewRequestForm: React.FC<NewRequestFormProps> = ({ onOrderPlaced }) => {
         if (existingItem) {
             setCart(cart.map(item => item.sku === product.sku ? { ...item, cantidad: item.cantidad + 1 } : item));
         } else {
+            // 'id' local temporal para React key, no se guarda en DB
             setCart([...cart, { id: Date.now(), sku: product.sku, cantidad: 1, comentario: '', productDetails: product }]);
         }
     };
@@ -40,26 +45,53 @@ const NewRequestForm: React.FC<NewRequestFormProps> = ({ onOrderPlaced }) => {
         }
     };
     
+    // ACTUALIZADO: handleSubmit con lógica de 2 pasos (Pedido + Items)
     const handleSubmit = async () => {
         if (!user || cart.length === 0) return;
         setSubmitting(true);
+
+        // 1. Crear el objeto del pedido principal
         const newOrder = {
-            idUsuarioSolicitante: user.id,
+            idUsuarioSolicitante: user.id, // UUID de Supabase Auth
             nombreUsuarioSolicitante: `${user.nombre} ${user.apellido}`,
-            idBodega: user.idBodega,
-            items: cart.map(({productDetails, ...item}) => item), // Remove productDetails before insertion
-            fecha: new Date().toISOString().split('T')[0],
-            estado: OrderStatus.Requested
+            idBodega: user.id_bodega,
+            estado: OrderStatus.Requested,
+            fecha: new Date().toISOString().split('T')[0] // Añadido campo fecha
         };
 
-        const { error } = await supabase.from('pedidos').insert(newOrder);
-        if (error) {
-            alert('Error al crear el pedido.');
-            console.error(error);
+        // 2. Insertar el pedido y obtener su ID
+        const { data: orderData, error: orderError } = await supabase
+            .from('pedidos')
+            .insert(newOrder)
+            .select() // .select() devuelve el registro insertado
+            .single();
+
+        if (orderError || !orderData) {
+            console.error('Error al crear la cabecera del pedido.', orderError);
+            setSubmitting(false);
+            return;
+        }
+
+        // 3. Preparar los items del pedido con el ID del pedido recién creado
+        const orderItems = cart.map(item => ({
+            idPedido: orderData.id, // ID del pedido recién creado
+            sku: item.sku,
+            cantidad: item.cantidad,
+            comentario: item.comentario
+        }));
+
+        // 4. Insertar todos los items del pedido en la tabla 'pedido_items'
+        const { error: itemsError } = await supabase.from('pedido_items').insert(orderItems);
+
+        if (itemsError) {
+            console.error('Error al guardar los productos del pedido.', itemsError);
+            // Rollback: Borrar el pedido principal si fallan los items para evitar inconsistencias
+            await supabase.from('pedidos').delete().eq('id', orderData.id);
+            console.error('Rollback: Pedido principal eliminado.');
         } else {
-            alert('Pedido enviado con éxito!');
+            console.log('Pedido enviado con éxito!');
             setCart([]);
-            onOrderPlaced();
+            onOrderPlaced(); // Avisar al componente padre para que cambie de vista
         }
         setSubmitting(false);
     }
@@ -88,6 +120,7 @@ const NewRequestForm: React.FC<NewRequestFormProps> = ({ onOrderPlaced }) => {
                                         value={item.cantidad} 
                                         onChange={(e) => updateQuantity(item.sku, parseInt(e.target.value))}
                                         className="w-16 p-1 text-center border rounded-md"
+                                        min="1"
                                     />
                                     <button onClick={() => updateQuantity(item.sku, 0)} className="text-red-500 hover:text-red-700">
                                         <TrashIcon className="w-5 h-5"/>

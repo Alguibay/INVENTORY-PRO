@@ -23,6 +23,10 @@ const EditUserForm: React.FC<EditUserFormProps> = ({ user, onSubmit, onCancel })
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email (Login)</label>
+                <input type="email" name="email" id="email" value={formData.email} disabled className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed" />
+            </div>
+            <div>
                 <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">Nombre</label>
                 <input type="text" name="nombre" id="nombre" value={formData.nombre} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
             </div>
@@ -43,8 +47,25 @@ const EditUserForm: React.FC<EditUserFormProps> = ({ user, onSubmit, onCancel })
                 </select>
             </div>
              <div>
-                <label htmlFor="bodegaAsignada" className="block text-sm font-medium text-gray-700">Bodega Asignada</label>
-                <input type="text" name="bodegaAsignada" id="bodegaAsignada" value={formData.bodegaAsignada} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
+                <label htmlFor="bodega_asignada" className="block text-sm font-medium text-gray-700">Bodega Asignada</label>
+                <input type="text" name="bodega_asignada" id="bodega_asignada" value={formData.bodega_asignada} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
+            </div>
+             <hr/>
+            <h4 className="text-md font-medium text-gray-800 pt-2">Información de Envío</h4>
+
+            <div>
+                <label htmlFor="direccion_envio" className="block text-sm font-medium text-gray-700">Dirección de Envío</label>
+                <input type="text" name="direccion_envio" id="direccion_envio" value={formData.direccion_envio} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="comuna" className="block text-sm font-medium text-gray-700">Comuna</label>
+                    <input type="text" name="comuna" id="comuna" value={formData.comuna} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
+                </div>
+                <div>
+                    <label htmlFor="region" className="block text-sm font-medium text-gray-700">Región</label>
+                    <input type="text" name="region" id="region" value={formData.region} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary" />
+                </div>
             </div>
             <div className="flex justify-end space-x-3 pt-2">
                 <button type="button" onClick={onCancel} className="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">Cancelar</button>

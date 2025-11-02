@@ -31,7 +31,8 @@ const AdminView: React.FC<AdminViewProps> = ({ onLogout }) => {
     };
 
     // Fix: Changed icon prop type to React.ReactElement to provide a more specific type for React.cloneElement.
-    const NavItem: React.FC<{ view: AdminViewType; label: string; icon: React.ReactElement }> = ({ view, label, icon }) => (
+    // FIX: The `React.ReactElement` type is too generic for `React.cloneElement` to correctly infer props. Changing it to `React.ReactElement<any>` resolves the type error.
+    const NavItem: React.FC<{ view: AdminViewType; label: string; icon: React.ReactElement<any> }> = ({ view, label, icon }) => (
         <button
             onClick={() => setActiveView(view)}
             className={`flex items-center w-full px-4 py-3 text-left transition-colors duration-200 rounded-lg ${

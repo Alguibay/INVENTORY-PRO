@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 
 interface LoginProps {
-    onLogin: (credentials: { rut: string; password: string }) => Promise<void>;
+    onLogin: (credentials: { email: string; password: string }) => Promise<void>;
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin }) => {
-    const [rut, setRut] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -15,9 +15,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setError(null);
         setLoading(true);
         try {
-            await onLogin({ rut, password });
+            await onLogin({ email, password });
         } catch (err: any) {
-            setError(err.message || 'Ocurrió un error inesperado.');
+            if (err.message === 'Invalid login credentials') {
+                setError('Credenciales inválidas. Por favor, verifique el Email y la contraseña.');
+            } else {
+                setError(err.message || 'Ocurrió un error inesperado.');
+            }
         } finally {
             setLoading(false);
         }
@@ -32,17 +36,18 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 </div>
                 <form className="space-y-6" onSubmit={handleSubmit}>
                     <div>
-                        <label htmlFor="rut" className="block text-sm font-medium text-gray-700">
-                            Usuario / RUT
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                            Email
                         </label>
                         <input
-                            id="rut"
-                            name="rut"
-                            type="text"
+                            id="email"
+                            name="email"
+                            type="email"
+                            autoComplete="email"
                             required
-                            value={rut}
-                            onChange={(e) => setRut(e.target.value)}
-                            placeholder="Ej: 1"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="ejemplo@correo.com"
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                         />
                     </div>
@@ -54,6 +59,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                             id="password"
                             name="password"
                             type="password"
+                            autoComplete="current-password"
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}

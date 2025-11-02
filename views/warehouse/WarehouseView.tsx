@@ -1,4 +1,5 @@
 
+
 import React, { useState, useContext } from 'react';
 import { UserContext } from '../../App';
 import RequestQueue from './RequestQueue';
@@ -22,7 +23,7 @@ const WarehouseView: React.FC<WarehouseViewProps> = ({ onLogout }) => {
                  return (
                     <div className="p-4 text-center">
                         <h2 className="text-xl font-bold">{user?.nombre} {user?.apellido}</h2>
-                        <p className="text-gray-500">{user?.tipo} - {user?.bodegaAsignada}</p>
+                        <p className="text-gray-500">{user?.tipo} - {user?.bodega_asignada}</p>
                         <button onClick={onLogout} className="mt-8 bg-error text-white font-bold py-2 px-4 rounded-lg w-full">
                             Cerrar Sesión
                         </button>

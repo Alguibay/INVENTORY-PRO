@@ -55,7 +55,8 @@ const ManageInventory: React.FC = () => {
     };
 
     const handleUpdateItem = async (updatedItem: Inventory) => {
-        const { error } = await supabase.from('inventario').update(updatedItem.id, updatedItem);
+        const { id, ...itemData } = updatedItem;
+        const { error } = await supabase.from('inventario').update(itemData).eq('id', id);
         if (error) {
             alert('Error al actualizar el inventario.');
         } else {
@@ -66,7 +67,7 @@ const ManageInventory: React.FC = () => {
     };
     
     const handleAddItem = async (newItem: Omit<Inventory, 'id'>) => {
-        const { error } = await supabase.from('inventario').insert(newItem);
+        const { error } = await supabase.from('inventario').insert([newItem]);
         if (error) {
             alert('Error al agregar al inventario.');
         } else {
@@ -80,8 +81,8 @@ const ManageInventory: React.FC = () => {
             ...i,
             fecha: new Date().toISOString().split('T')[0],
             estado: i.estado ?? true
-        } as Omit<Inventory, 'id'>));
-        const { error } = await supabase.from('inventario').insertBulk(itemsToInsert);
+        }));
+        const { error } = await supabase.from('inventario').insert(itemsToInsert);
          if (error) {
              alert(`Error al cargar inventario: ${error.message}`);
         } else {

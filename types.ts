@@ -29,17 +29,18 @@ export enum ProductType {
 }
 
 export interface User {
-    id: number;
-    idBodega: number;
+    id: string; // Changed from number to handle Supabase UUIDs
+    id_bodega: number;
     nombre: string;
     apellido: string;
     tipo: UserRole;
-    bodegaAsignada: string;
-    direccionEnvio: string;
+    bodega_asignada: string;
+    direccion_envio: string;
     comuna: string;
     region: string;
     pais: string;
     rut: string;
+    email: string; // Added email field
     password?: string;
 }
 
@@ -65,6 +66,7 @@ export interface Inventory {
 
 export interface OrderItem {
     id: number;
+    idPedido?: number;
     sku: string;
     cantidad: number;
     comentario: string;
@@ -73,10 +75,9 @@ export interface OrderItem {
 
 export interface Order {
     id: number;
-    idUsuarioSolicitante: number;
+    idUsuarioSolicitante: string; // Changed from number to handle Supabase UUIDs
     nombreUsuarioSolicitante: string;
     idBodega: number;
-    items: OrderItem[];
     fecha: string;
     estado: OrderStatus;
     numeroGuia?: string;
@@ -84,6 +85,11 @@ export interface Order {
     fechaRetiro?: string;
     rejectionReason?: string;
 }
+
+export interface OrderWithItems extends Order {
+    items: OrderItem[];
+}
+
 
 export interface WarehouseLocation {
     id: number;

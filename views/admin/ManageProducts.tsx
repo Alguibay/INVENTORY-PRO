@@ -40,7 +40,8 @@ const ManageProducts: React.FC = () => {
     };
 
     const handleUpdateProduct = async (updatedProduct: Product) => {
-        const { error } = await supabase.from('productos').update(updatedProduct.id, updatedProduct);
+        const { id, ...productData } = updatedProduct;
+        const { error } = await supabase.from('productos').update(productData).eq('id', id);
         if (error) {
             alert('Error al actualizar producto.');
         } else {
@@ -51,7 +52,7 @@ const ManageProducts: React.FC = () => {
     };
     
     const handleAddProduct = async (newProduct: Omit<Product, 'id'>) => {
-        const { error } = await supabase.from('productos').insert(newProduct);
+        const { error } = await supabase.from('productos').insert([newProduct]);
         if (error) {
             alert('Error al agregar producto.');
         } else {
@@ -66,8 +67,8 @@ const ManageProducts: React.FC = () => {
             estado: p.estado ?? true,
             nombreLargo: p.nombreLargo || p.nombre || '',
             descripcion: p.descripcion || ''
-        } as Omit<Product, 'id'>));
-        const { error } = await supabase.from('productos').insertBulk(productsToInsert);
+        }));
+        const { error } = await supabase.from('productos').insert(productsToInsert);
         if (error) {
              alert(`Error al cargar productos: ${error.message}`);
         } else {

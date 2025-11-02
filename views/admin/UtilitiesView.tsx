@@ -4,7 +4,7 @@ import { supabase } from '../../services/supabase';
 import { downloadMultiSheetXLSX } from '../../utils/fileHelpers';
 
 const TABLE_DEFINITIONS = {
-    Usuarios: 'usuarios',
+    Usuarios: 'profiles',
     Productos: 'productos',
     Inventario: 'inventario',
     Bodegas: 'bodegas',

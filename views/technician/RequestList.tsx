@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useContext } from 'react';
-import { Order, OrderStatus } from '../../types';
-import { supabase, mockProducts } from '../../services/supabase';
+import { OrderWithItems, OrderStatus, Product, OrderItem } from '../../types';
+import { supabase } from '../../services/supabase';
 import { UserContext } from '../../App';
 import { TruckIcon, CheckCircleIcon, BoxIcon } from '../../components/icons/Icons';
 
@@ -24,11 +23,12 @@ const getStatusStyles = (status: OrderStatus) => {
 };
 
 
-const OrderCard: React.FC<{ order: Order }> = ({ order }) => {
+const OrderCard: React.FC<{ order: OrderWithItems; products: Product[] }> = ({ order, products }) => {
     const { bg, text, border } = getStatusStyles(order.estado);
     const [expanded, setExpanded] = useState(false);
 
-    const getProductDetails = (sku: string) => mockProducts.find(p => p.sku === sku);
+    // Ahora busca en la lista de productos reales pasada como prop
+    const getProductDetails = (sku: string) => products.find(p => p.sku === sku);
 
     return (
         <div className={`bg-white rounded-lg shadow-md mb-4 border-l-4 ${border}`}>
@@ -57,7 +57,7 @@ const OrderCard: React.FC<{ order: Order }> = ({ order }) => {
                 <div className="border-t border-gray-200 p-4 bg-gray-50">
                     <h4 className="font-semibold text-gray-700 mb-2">Detalles del Pedido:</h4>
                     <ul className="space-y-2">
-                        {order.items.map(item => {
+                        {order.items.map((item: OrderItem) => {
                              const product = getProductDetails(item.sku);
                              return (
                                 <li key={item.id} className="flex justify-between items-center text-sm">
@@ -89,23 +89,65 @@ const OrderCard: React.FC<{ order: Order }> = ({ order }) => {
 
 const RequestList: React.FC = () => {
     const { user } = useContext(UserContext);
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [orders, setOrders] = useState<OrderWithItems[]>([]);
+    const [products, setProducts] = useState<Product[]>([]); // Estado para productos
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchOrders = async () => {
+        const fetchData = async () => {
             if (!user) return;
             setLoading(true);
-            const { data, error } = await supabase.from('pedidos').select(o => o.idUsuarioSolicitante === user.id);
-            if (error) {
-                console.error('Error fetching orders:', error);
+
+            // 1. Cargar Pedidos del usuario
+            const { data: ordersData, error: ordersError } = await supabase
+                .from('pedidos')
+                .select('*')
+                .eq('idUsuarioSolicitante', user.id);
+
+            // 2. Cargar Productos
+            const { data: productsData, error: productsError } = await supabase
+                .from('productos')
+                .select('*');
+
+            // Manejar resultados
+            if (ordersError) {
+                console.error('Error fetching orders:', ordersError.message, ordersError);
+            } else if (ordersData) {
+                 // 3. Cargar los items para los pedidos obtenidos
+                const orderIds = ordersData.map(o => o.id);
+                if (orderIds.length > 0) {
+                    const { data: itemsData, error: itemsError } = await supabase
+                        .from('pedido_items')
+                        .select('*')
+                        .in('idPedido', orderIds);
+
+                    if (itemsError) {
+                        console.error('Error fetching order items:', itemsError.message, itemsError);
+                    } else {
+                        // 4. Combinar pedidos con sus items
+                        const ordersWithItems: OrderWithItems[] = ordersData.map(order => ({
+                            ...order,
+                            items: itemsData?.filter(item => item.idPedido === order.id) || []
+                        }));
+                        setOrders(ordersWithItems.sort((a, b) => b.id - a.id));
+                    }
+                } else {
+                     setOrders([]);
+                }
             } else {
-                setOrders(data.sort((a,b) => b.id - a.id) || []);
+                setOrders([]);
             }
+
+            if (productsError) {
+                console.error('Error fetching products:', productsError.message, productsError);
+            } else {
+                setProducts(productsData || []);
+            }
+            
             setLoading(false);
         };
 
-        fetchOrders();
+        fetchData();
     }, [user]);
 
     if (loading) return <div className="text-center p-4">Cargando pedidos...</div>;
@@ -120,7 +162,8 @@ const RequestList: React.FC = () => {
     return (
         <div className="p-4">
             {orders.map(order => (
-                <OrderCard key={order.id} order={order} />
+                // Pasar los productos al componente OrderCard
+                <OrderCard key={order.id} order={order} products={products} />
             ))}
         </div>
     );
